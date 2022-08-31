@@ -1,0 +1,33 @@
+{
+  "name": "tuezy/routing",
+  "autoload": {
+    "psr-4": {
+      "Tuezy\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "authors": [
+    {
+      "name": "HoangTu",
+      "email": "vohoangtu0409@gmail.com"
+    }
+  ],
+  "config": {
+    "optimize-autoloader": true,
+    "preferred-install": "dist",
+    "sort-packages": true
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "require": {
+    "php": ">=7.1",
+    "tuezy/container": "^0.0.4"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "*"
+  }
+}
