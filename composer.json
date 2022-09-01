@@ -24,9 +24,7 @@
   "minimum-stability": "dev",
   "prefer-stable": true,
   "require": {
-    "php": ">=7.3",
-    "symfony/var-dumper": "^6.1",
-    "tuezy/container": "^0.0.4"
+    "php": ">=7.0"
   },
   "require-dev": {
     "phpunit/phpunit": "*"
