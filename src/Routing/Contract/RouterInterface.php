@@ -8,6 +8,4 @@ interface RouterInterface{
     public function prefix(string $prefix, $action);
     public function group(string $prefix, $action);
     public function name(string $name);
-
-    public function routes();
 }

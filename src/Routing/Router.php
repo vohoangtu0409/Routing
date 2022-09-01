@@ -1,50 +1,59 @@
 <?php
 namespace Tuezy\Routing;
 
-use Tuezy\Routing\Contract\RouterInterface;
+use Tuezy\Routing\Traits\ValidateRoute;
 
-class Router implements RouterInterface {
+class Router{
+    use ValidateRoute;
 
-    protected $method;
-    protected $uri;
-    protected $action;
     protected $prefix = '/index';
-    protected $group = false;
 
-    protected $isGrouping = 0;
-
-    protected $routes = [];
+    protected $grouping = 0;
 
     protected $currentRoute;
 
+    protected $routes = [];
+    protected $routesMaps = [];
 
 
-    protected function current(): CompiledRoute{
-        return  $this->currentRoute;
+    public function group($prefix, $action){
+        return $this->prefix($prefix, $action);
+    }
+    public function prefix($prefix, $action){
+      $this->grouping = 1;
+      $this->prefix = $this->forceStartWith($prefix == '/' ? 'index' : $prefix, '/');
+      $this->whiteList($this->prefix);
+      call_user_func($action, $this);
+      $this->prefix = '/index';
+      $this->grouping = 0;
+      return $this;
+    }
+    private function definePrefix($uri){
+        if($this->grouping){
+            return $this->prefix;
+        }
+        if($uri == '/') return '/index';
+        else{
+            $uri = explode('/', $uri);
+            if(substr($uri[1], 0, 1) != '{'){
+                return $this->forceStartWith($uri[1], '/');
+            }
+        }
+        return '/index';
     }
 
-    public function reset(){
-        $this->isGrouping = 0;
-        $this->uri = null;
-        $this->action = null;
-        $this->prefix = '/index';
-        $this->group = false;
+    private function genURI($uri){
+        $uri = $this->forceStartWith($uri, '/');
+        $this->prefix = $this->definePrefix($uri);
+        $genURI = $this->prefix . $uri;
+        if(substr($genURI, -1, 1) == '/')
+            return substr($genURI, 0, strlen($genURI) - 1);
+        return $genURI;
     }
-
-    private function defineRoute($method, $uri, $action){
-        $compiledRoute = new CompiledRoute(
-            new Route($method, $this->startWithSlash($uri), $action),
-            $this->prefix
-        );
-
-        $this->method = $method;
-        $this->currentRoute = $compiledRoute;
-        $this->routes[$method][$compiledRoute->getName()] = $compiledRoute;
-
-        if($this->isGrouping == 0)
-            $this->reset();
-
-        return $compiledRoute;
+    private function defineRoute($method, string $uri, $action){
+        $this->currentRoute = new Route($method, $this->genURI($uri), $action);
+        $this->routes[$method][$this->currentRoute->getCompiledName()] = $this->currentRoute;
+        return $this;
     }
 
     public function get(string $uri, $action){
@@ -59,34 +68,16 @@ class Router implements RouterInterface {
         return $this->defineRoute(Route::ROUTE_PUT, $uri, $action);
     }
 
-    public function group(string $prefix, $action = null){
-        $this->isGrouping = 1;
-        $this->prefix = $this->startWithSlash($prefix);
-
-        if(is_callable($action)){
-            call_user_func($action, $this);
-        }
-        $this->reset();
-        return $this;
-    }
-
-    public function prefix(string $prefix, $action = null){
-        return $this->group($prefix, $action);
-    }
-
-    public function name(string $name){
-        $route = $this->current();
-        $this->routes[$this->method][$name] = $route;
-        return $this;
-    }
-
-    public function routes()
-    {
-        return $this->routes;
+    public function name($name){
+        $this->routesMaps[$name] = $this->currentRoute->getCompiledName();
     }
 
     public function match($method, $uri){
-        //check $uri startWith /
+        $uri = $this->forceStartWith($uri, '/');
+
+        if(substr($uri, -1, 1) == '/')
+            $uri = substr($uri, 0, strlen($uri) - 1);
+
         $uriParts = explode('/', $uri);
 
         $prefix = '';
@@ -94,18 +85,16 @@ class Router implements RouterInterface {
             $prefix = '/index';
         }
 
-        $generateName = $method . $prefix . $this->startWithSlash($uri);
+        foreach ($uriParts as $part){
+            if(in_array($part, array_keys(self::$whiteList))) continue;
+            $uri = str_replace($part, Route::$reversePattern, $uri);
+        }
+
+        $generateName = $method . $prefix . $uri;
 
         if(isset($this->routes[$method][$generateName])){
             return $this->routes[$method][$generateName];
-        }else{
-
         }
-
-        return [$generateName, $this->routes[$method]];
-    }
-
-    private function startWithSlash($name){
-        return substr($name,0,1) != '/' ? '/' . $name : $name;
+        return null;
     }
 }

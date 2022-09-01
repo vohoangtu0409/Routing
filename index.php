@@ -13,7 +13,9 @@ $router->group('admin', function($router){
     $router->get('index', function(){
         return 'Admin Index Callback';
     })->name('index');
-
+    $router->get('/', function(){
+        return 'Admin Index Callback';
+    })->name('admin.index');
     $router->get('edit/{id}', [
         'controller' => 'AdminController',
         'action'    => 'index'
@@ -25,5 +27,5 @@ $router->group('admin', function($router){
     ])->name('admin.edit.account');
 });
 echo '<pre>';
-var_dump($router->match($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']));
+dd($router->match($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']));
 echo '</pre>';
