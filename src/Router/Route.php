@@ -1,5 +1,5 @@
 <?php
-namespace Tuezy\Routing;
+namespace Tuezy\Router;
 
 class Route{
 
@@ -17,43 +17,21 @@ class Route{
 
     protected $compiledName;
 
-    public const ROUTE_GET = 'GET';
-
-    public const ROUTE_POST = 'POST';
-
-    public const ROUTE_PUT = 'PUT';
-
-    public static $reversePattern = '[A-Za-z0-9]';
-
     /**
      * @param $method
      * @param $prefix
      * @param $uri
-     * @param $namespace
      * @param $action
-     * @param $name
      */
+
     public function __construct($method, $prefix, $uri, $action)
     {
         $this->method = $method;
-        $this->uri = $uri;
         $this->prefix = $prefix;
+        $this->uri = $uri;
         $this->action = $action;
-        $this->generateCompiledName();
     }
 
-    private function generateCompiledName(){
-        $compoledURI = explode('/', $this->uri);
-        foreach ($compoledURI as $stt => $uri){
-            if(substr($uri, 0 , 1) == '{'){
-                $compoledURI[$stt] = self::$reversePattern;
-            }
-            else if(!empty($uri)){
-                Router::$whiteList[$uri] = 1;
-            }
-        }
-        $this->compiledName = $this->method . $this->prefix . implode('/', $compoledURI);
-    }
     /**
      * @return mixed
      */
@@ -156,6 +134,15 @@ class Route{
     public function getCompiledName()
     {
         return $this->compiledName;
+    }
+
+    /**
+     * @param mixed $compiledName
+     */
+    public function setCompiledName($compiledName): void
+    {
+        $compiledName = preg_replace('/({+[^\/]+})/', '[a-zA-Z0-9]', $compiledName);
+        $this->compiledName = $compiledName;
     }
 
 }

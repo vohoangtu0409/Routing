@@ -24,7 +24,8 @@
   "minimum-stability": "dev",
   "prefer-stable": true,
   "require": {
-    "php": ">=7.0"
+    "php": ">=7.4",
+    "ext-json": "*"
   },
   "require-dev": {
     "phpunit/phpunit": "*"
