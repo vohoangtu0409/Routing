@@ -25,7 +25,8 @@
   "prefer-stable": true,
   "require": {
     "php": ">=7.4",
-    "ext-json": "*"
+    "ext-json": "*",
+    "symfony/var-dumper": "^6.1"
   },
   "require-dev": {
     "phpunit/phpunit": "*"

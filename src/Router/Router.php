@@ -4,7 +4,7 @@ namespace Tuezy\Router;
 class Router{
     protected $isGrouping = 0;
 
-    protected $routes = [];
+    protected static $routes = [];
 
     protected $routesMap = [];
 
@@ -40,9 +40,6 @@ class Router{
     }
 
     private function create($method, $uri, $action){
-        if($this->isCache){
-            return $this;
-        }
         $uri = RouterHelper::startWithSlash($uri);
 
         if($this->isGrouping == 1){
@@ -91,7 +88,6 @@ class Router{
 
     public function match($method, $uri){
         $uri = RouterHelper::startWithSlash($uri);
-        echo json_encode($this->routes);
         if($uri != '/' && RouterHelper::isEndWith($uri, '/')){
             $uri = substr($uri, 0 , strlen($uri)-1);
         }

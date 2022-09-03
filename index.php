@@ -15,7 +15,7 @@ $router->get('/{id}', function(){
 $router->get('/contact', function(){
     return 'contact home';
 })->name('home.contact');
-for($i = 0; $i < 100000; $i++) {
+for($i = 0; $i < 10; $i++) {
     $router->group('admin'. ($i == 0 ? '' : $i), function ($router) {
         $router->get('index', function () {
             return 'Admin Index Callback';
