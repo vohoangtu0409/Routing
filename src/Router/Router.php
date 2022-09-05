@@ -1,152 +1,146 @@
 <?php
 namespace Tuezy\Router;
 
+use Closure;
 class Router{
-    protected $isGrouping = 0;
 
-    protected static $routes = [];
+  protected $prefix = '';
+  protected $isGrouping = 0;
+  protected $routeList = [];
+  protected $routeMapList = [];
+  protected $whiteList = [];
+  protected $current;
+  protected $name = '';
+  protected $currentStep = 0;
+  protected $previousStep = 0;
 
-    protected $routesMap = [];
+  public const STEP_GROUP = 1;
+  public const STEP_CREATE = 2;
+  public const STEP_NAME = 3;
 
-    protected $excludeKeys = [];
+  public function group($prefix, Closure $callback){
+      $this->allowStep(self::STEP_GROUP);
+      $this->prefix($prefix);
+      $this->isGrouping = 1;
+      call_user_func($callback, $this);
+      $this->isGrouping = 0;
+      $this->prefix = '';
+  }
 
-    protected $prefix;
+  public function prefix($prefix){
+      $this->prefix = $prefix;
+      return $this;
+  }
+  public function create($method, $uri, $action){
+      $this->allowStep(self::STEP_CREATE);
+      $route = new Route($method, $this->calcPrefix($uri), $action);
+      $route->setCompiledName($this->generateKey($route));
 
-    protected $debug = 0;
+      $this->current = $route;
+      $this->addToList($route);
 
-    protected $isCache;
+      if($this->isGrouping == 0){
+          $this->prefix = '';
+      }
 
-    public function __construct()
-    {
-        $this->exclude('GET');
-        $this->exclude('POST');
-        $this->exclude('PUT');
-    }
+      if(!empty($this->name)){
+          $this->name($this->name);
+      }
+      return $this;
+  }
 
-    public function group($prefix, $callable = null){
-        $this->prefix($prefix, $callable);
-    }
+  public function name($name){
+      $this->allowStep(self::STEP_NAME);
+      $this->name = $name;
 
-    public function prefix($prefix, $callable = null){
-        if($this->isCache){
-            return $this;
+      if(isset($this->routeMapList[$name])){
+        throw new \Exception("Name is already existed");
+      }
+      if(is_null($this->current)){
+          return $this;
+      }else{
+          $this->routeMapList[$this->name]= $this->current->getCompiledName();
+          $this->current = null;
+          $this->name = '';
+      }
+      return $this;
+  }
+
+  public function all(){
+      return [$this->routeList, $this->whiteList, $this->routeMapList];
+  }
+
+  public function match($method, $uri) : Route{
+      if($uri != '/' && RouterHelper::isEndWith($uri, '/')){
+          $uri = substr($uri, 0, strlen($uri) - 1);
+      }
+      $explodedURI = explode('/', $uri);
+      foreach($explodedURI as $i => $eri){
+          if(!empty($eri) && !in_array($eri, array_keys($this->whiteList))){
+              $explodedURI[$i] = '[a-zA-Z0-9]';
+          }
+      }
+      $rri = implode('/', $explodedURI);
+      return $this->routeList[$method . $rri];
+  }
+
+  private function calcPrefix($uri){
+      if(!empty($this->prefix)){
+        $this->prefix = RouterHelper::startWithSlash($this->prefix);
+      }
+
+      $uri = RouterHelper::startWithSlash($uri);
+
+      if(!empty($this->prefix) && $uri == '/'){
+        $uri = '';
+      }
+
+      return $this->prefix . $uri;
+  }
+
+  private function addToList(Route $route){
+    $this->routeList[$route->getCompiledName()] = $route;
+  }
+
+  private function generateKey(Route $route)
+  {
+      $uri = $route->getUri();
+      $uri = RouterHelper::compiled($uri);
+      $explodedURI = explode('/', $uri);
+      foreach($explodedURI as $i => $eri){
+        if(!empty($eri) && $eri != '[a-zA-Z0-9]'){
+            if(!isset($this->whiteList[$eri]))
+                $this->whiteList[$eri] = 1;
         }
-        $this->prefix = RouterHelper::removeSlash($prefix);
-        $this->isGrouping = 1;
-        $this->exclude($prefix);
-        if($callable)
-            call_user_func($callable, $this);
-        $this->isGrouping = 0;
-    }
+      }
+      return $route->getMethod(). $uri;
+  }
 
-    private function create($method, $uri, $action){
-        $uri = RouterHelper::startWithSlash($uri);
+  private function allowStep($step){
+      if($this->previousStep == $step){
+          switch ($step){
+              case self::STEP_NAME:
+              case self::STEP_CREATE:
+                  $this->reset();
+                  break;
+          }
 
-        if($this->isGrouping == 1){
-            $prefix = $this->prefix;
-        }else{
-            $prefix = RouterHelper::calcPrefix($uri);
-            $this->exclude($prefix);
-        }
-        $this->whiteListKey($uri);
+      }
+      $this->previousStep = $this->currentStep;
+      $this->currentStep = $step;
+      return true;
+  }
 
-        $route = new Route($method, $prefix, $uri, $action);
-        $compiledName = RouterHelper::computeCompiledName($method, $prefix, $uri);
-        $route->setCompiledName($compiledName);
+  private function reset(){
+      $this->name = '';
+      $this->currentStep = 0;
+      $this->previousStep = 0;
+  }
 
-
-        $this->routes[$method][$route->getCompiledName()] = $route;
-        return $this;
-    }
-
-    public function get($uri, $action){
-        return $this->create('GET', $uri, $action);
-    }
-    public function post($uri, $action){
-        return $this->create('POST', $uri, $action);
-    }
-    public function put($uri, $action){
-        return $this->create('PUT', $uri, $action);
-    }
-
-    public function name($name){
-
-    }
-
-    private function whiteListKey($uri){
-        if(strlen($uri) > 1){
-            $explodeURI = explode('/', $uri);
-            foreach($explodeURI as $euri){
-                if(RouterHelper::isStartWith($euri , '{') )
-                    continue;
-                if(!empty($euri))
-                    $this->exclude($euri);
-            }
-
-        }
-    }
-
-    public function match($method, $uri){
-        $uri = RouterHelper::startWithSlash($uri);
-        if($uri != '/' && RouterHelper::isEndWith($uri, '/')){
-            $uri = substr($uri, 0 , strlen($uri)-1);
-        }
-
-        $prefix = RouterHelper::calcPrefix($uri);
-
-        $computeCompiledName = RouterHelper::computeCompiledName($method, $prefix, $uri);
-
-        $encodeURI = explode('/', $computeCompiledName);
-
-        foreach ($encodeURI as $index => $euri){
-            if( !empty($euri) && ! in_array($euri, array_keys($this->excludeKeys))){
-                $encodeURI[$index] = '[a-zA-Z0-9]';
-            }
-        }
-
-        $computeCompiledName = implode('/', $encodeURI);
-        if(isset($this->routes[$method][$computeCompiledName])){
-            return $this->routes[$method][$computeCompiledName];
-        }
-        return null;
-    }
-
-    private function exclude($key){
-        if(!RouterHelper::isStartWith($key, '{'))
-            $this->excludeKeys[$key] = 1;
-    }
-
-    /**
-     * @param array $routes
-     */
-    public function setRoutes(array $routes): void
-    {
-        $this->routes = $routes;
-    }
-
-    /**
-     * @param array $routesMap
-     */
-    public function setRoutesMap(array $routesMap): void
-    {
-        $this->routesMap = $routesMap;
-    }
-
-    /**
-     * @param array $excludeKeys
-     */
-    public function setExcludeKeys(array $excludeKeys): void
-    {
-        $this->excludeKeys = $excludeKeys;
-    }
-
-    /**
-     * @param mixed $isCache
-     */
-    public function setIsCache($isCache): void
-    {
-        $this->isCache = $isCache;
-    }
-
-
+  public function route($name){
+      if(isset($this->routeMapList[$name])){
+          return $this->routeList[$this->routeMapList[$name]];
+      }
+      return null;
+  }
 }

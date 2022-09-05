@@ -29,12 +29,14 @@ class RouterHelper{
         }
         return $prefix;
     }
-
+    public static function forceStartWithSlash($uri){
+        return self::startWithSlash($uri);
+    }
     public static function startWithSlash($uri){
-        return (substr($uri, 0 , 1) == '/') ? $uri : '/'. $uri;
+        return self::isStartWith($uri, '/') ? $uri : '/'. $uri;
     }
     public static function endWithSlash($uri){
-        return (substr($uri, 0 , -1) == '/') ? $uri : $uri . '/';
+        return self::isEndWith($uri, '/') ? $uri : $uri . '/';
     }
     public static function removeSlash($uri){
         return preg_replace('/\//', '', $uri);
@@ -43,7 +45,7 @@ class RouterHelper{
         return (substr($str, 0 , 1) == $char);
     }
     public static function isEndWith($str, $char){
-        return (substr($str, 0 , -1) == $char);
+        return (substr($str, strlen($str) - 1 , strlen($str) - 2) == $char);
     }
 
     public static function formatURI($uri){
@@ -52,5 +54,9 @@ class RouterHelper{
             $uri = substr($uri, 0 , strlen($uri) - 1);
         }
         return $uri;
+    }
+
+    public static function compiled($str){
+        return preg_replace('/({+[^\/]+})/', '[a-zA-Z0-9]', $str);
     }
 }

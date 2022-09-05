@@ -24,10 +24,9 @@ class Route{
      * @param $action
      */
 
-    public function __construct($method, $prefix, $uri, $action)
+    public function __construct($method, $uri, $action)
     {
         $this->method = $method;
-        $this->prefix = $prefix;
         $this->uri = $uri;
         $this->action = $action;
     }
@@ -141,8 +140,12 @@ class Route{
      */
     public function setCompiledName($compiledName): void
     {
-        $compiledName = preg_replace('/({+[^\/]+})/', '[a-zA-Z0-9]', $compiledName);
         $this->compiledName = $compiledName;
     }
 
+   public function __serialize(): array
+   {
+
+       return get_object_vars( $this );
+   }
 }

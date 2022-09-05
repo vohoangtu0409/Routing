@@ -4,61 +4,37 @@ require 'vendor/autoload.php';
 
 $router = new \Tuezy\Router\Router();
 
-$router->get('/', function(){
-    return 'Index home';
-})->name('home');
+$router->group('dashboard', function($router){
+    $router->create('GET', '/', [
+        'controller' => IndexController::class,
+        'action'    => 'index',
+        'default'   => [
 
-$router->get('/{id}', function(){
-    return 'Index {id}  home';
-})->name('home.account');
+        ]
+    ]);
+    $router->create('GET', '/{id}', 'abc')->name('dashboard.index.id');
+    $router->create('GET', '/account', 'abc');
+    $router->create('GET', '/account/{id}', 'abc');
+    $router->create('GET', '/', 'abc');
+});
+//
+//
+$router->create('GET', '/', 'abc')->name('index');
+$router->name('index.id')->create('GET', '/{id}', 'abc');
+$router->create('GET', '/account', 'abc');
+$router->name('index.count')->create('GET', '/account/{id}', 'abc');
+$router->create('GET', '/', 'abc');
 
-$router->get('/contact', function(){
-    return 'contact home';
-})->name('home.contact');
-for($i = 0; $i < 10; $i++) {
-    $router->group('admin'. ($i == 0 ? '' : $i), function ($router) {
-        $router->get('index', function () {
-            return 'Admin Index Callback';
-        })->name('index');
+$request_uri = isset($_SERVER["PATH_INFO"]) ? $_SERVER["PATH_INFO"] : '/';
+$request = $router->match($_SERVER['REQUEST_METHOD'],$request_uri);
 
-        $router->get('/', function () {
-            return 'Admin Index Callback';
-        })->name('admin.index');
+dump($request, $router->all());
 
-        $router->get('edit/{id}', [
-            'controller' => 'AdminController',
-            'action' => 'index'
-        ])->name('admin.edit');
-
-        $router->get('edit/{id}/account/{accountId}', [
-            'controller' => 'AdminController',
-            'action' => 'account'
-        ])->name('admin.edit.account');
-    });
-}
-$router->get('/contact/{id}', function(){
-    return 'contact {id} home';
-})->name('home.contact.index');
-
-$router->get('/admin/edit/{id}', function(){
-    return 'admin edit {id} home';
-})->name('admin.contact.index');
-
-$microtime = microtime();
+$all = $router->all();
 
 
-echo '<pre>';
-$route = $router->match($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
-dump($route);
+dump($router->route('index'));
+dump($router->route('index.id'));
+dump($router->route('dashboard.index.id'));
+dump($router->route('index.count'));
 
-$action = $route->getAction();
-
-if(is_callable($action)){
-    echo call_user_func($action);
-}else{
-    dd($action);
-}
-
-echo '</pre>';
-
-echo (microtime() - $microtime);
